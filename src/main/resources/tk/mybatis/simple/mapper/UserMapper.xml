@@ -1,0 +1,294 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="tk.mybatis.simple.mapper.UserMapper">
+	
+	<!-- resultMap配置结果映射，id对应上面namespace命名空间 接口mapper ，type:映射实体类-->
+	<!-- colunm:数据库表 列名 -->
+	<!-- property:实体类 属性名 ，实际匹配的时候都转成大写格式，这里统一写成一样的-->
+	<!-- 数据库表的列名一般不区分大小写，以下划线_取名(user_name)，而Java类中以驼峰式命名 (userName)-->
+	
+	<resultMap id="userMap" type="tk.mybatis.simple.model.SysUser" >
+		<id property="id" column="id" />
+		<result property="userName" column="user_name"/>
+		<result property="userPassword"  column="user_password"/>
+		<result property="userEmail" column="user_email"/>
+		<result property="userInfo" column="user_info"/>
+		<result property="headImg" column="head_img" jdbcType="BLOB"/>
+		<result property="createTime" column="create_time" jdbcType="TIMESTAMP"/>
+	</resultMap>
+	
+	<!-- resultMap指定上面resultMap(id=UserMapper)映射的type:SysUser -->
+	<select id="selectById" resultMap="userMap">
+		select * from sys_user where id = #{id}
+	</select>
+	
+	<!-- resultMap：对应上面的标签 ，直接根据标签内的列名与属性来映射-->
+	<!-- resultType：对应全限定名的实体类，需要将查询的列名取别名 来 对应实体类属性 -->
+	<!-- 此处查询的返回值没有设成上处的resultMap,而是指定全限定名，查询结果列取别名和resultType指定对象的属性名保持一致，从而自动映射 -->
+	<select id="selectAll" resultType="tk.mybatis.simple.model.SysUser">
+		select id,
+			user_name userName,
+			user_password userPassword,
+			user_email userEmail,
+			user_info userInfo,
+			head_img headImg,
+			create_time createTime
+		from sys_user
+	</select>
+	
+	<select id="selectRolesByUserId1" resultType="tk.mybatis.simple.model.SysRole">
+		select
+			r.id,
+			r.role_name roleName,
+			r.enabled,
+			r.create_by createdBy,
+			r.create_time createdTime
+		from sys_user u
+		inner join sys_user_role ur on u.id=ur.user_id
+		inner join sys_role r on ur.role_id=r.id
+		where u.id = #{userId}
+	</select>
+	
+	<select id="selectRolesByUserId2" resultType="tk.mybatis.simple.model.SysRole">
+		select
+			r.id,
+			r.role_name roleName,
+			r.enabled,
+			r.create_by createdBy,
+			r.create_time createdTime,
+			u.user_name as "user.userName",
+			u.user_email as "user.userEmail"
+		from sys_user u
+		inner join sys_user_role ur on u.id=ur.user_id
+		inner join sys_role r on ur.role_id=r.id
+		where u.id = #{userId}
+	</select>
+	
+	<insert id="insert">
+		insert into sys_user
+			(id,user_name,user_password,user_email,user_info,head_img,create_time)
+		values(
+			#{id},#{userName},#{userPassword},#{userEmail},#{userInfo},
+			#{headImg,jdbcType=BLOB},
+			#{createTime,jdbcType=TIMESTAMP}
+		)
+	</insert>
+	
+	<!-- 需要返回主键自增值，这里设置用Jdbc的useGeneratedKeys方法取出数据库内部生成的主键，然后赋值给keyProperty对应的属性 -->
+	<insert id="insert2" useGeneratedKeys="true" keyProperty="id">
+		insert into sys_user
+			(user_name,user_password,user_email,user_info,head_img,create_time)
+		values(
+			#{userName},#{userPassword},#{userEmail},#{userInfo},
+			#{headImg,jdbcType=BLOB},
+			#{createTime,jdbcType=TIMESTAMP}
+		)
+	</insert>
+	
+	<!-- mysql插入，获取自增主键值，after-->
+	<!-- 主键是插入后才获取到的 -->
+	<insert id="insert3">
+		insert into sys_user
+			(user_name,user_password,user_email,user_info,head_img,create_time)
+		values(
+			#{userName},#{userPassword},#{userEmail},#{userInfo},
+			#{headImg,jdbcType=BLOB},
+			#{createTime,jdbcType=TIMESTAMP}
+		)
+		<selectKey keyColumn="id" keyProperty="id" resultType="long" order="AFTER">
+			select last_insert_id()
+		</selectKey>
+	</insert>	
+	
+	<!-- Oracle插入，需要获取自增主键值，before -->
+	<!-- 先从自增序列中获取，然后将其插入到数据库中 -->	
+<!-- 	<insert id="insert3">
+		<selectKey keyColumn="id" keyProperty="id" resultType="long" order="BEFORE">
+			select seq_id.nextval from dual
+		</selectKey>
+		insert into sys_user
+			(id,user_name,user_password,user_email,user_info,head_img,create_time)
+		values(
+			#{id},#{userName},#{userPassword},#{userEmail},#{userInfo},
+			#{headImg,jdbcType=BLOB},
+			#{createTime,jdbcType=TIMESTAMP}
+		)
+	</insert>	 -->
+	
+	<update id="updateById">
+		update sys_user
+		set user_name = #{userName},
+			user_password = #{userPassword},
+			user_email = #{userEmail},
+			user_info = #{userInfo},
+			head_img = #{headImg,jdbcType=BLOB},
+			create_time = #{createTime,jdbcType=TIMESTAMP}
+		where id = #{id}
+	</update>
+	
+	<delete id="deleteById">
+		delete from sys_user where id = #{id}
+	</delete>
+	
+	<delete id="deleteByUser">
+		delete from sys_user where id = #{id}
+	</delete>
+	
+	<!-- 多参数情况，需要接口Mapper.java中参数列表设置@Param("") -->
+	<select id="selectRolesByUserIdAndRoleEnabled" resultType="tk.mybatis.simple.model.SysRole">
+		select
+			r.id,
+			r.role_name roleName,
+			r.enabled,
+			r.create_by createdBy,
+			r.create_time createdTime,
+			u.user_name as "user.userName",
+			u.user_email as "user.userEmail"
+		from sys_user u
+		inner join sys_user_role ur on u.id=ur.user_id
+		inner join sys_role r on ur.role_id=r.id
+		where u.id = #{userId} and r.enabled = #{enabled} and u.user_name = #{userName}
+	</select>
+	
+	<!-- 添加if标签判定条件为空，假如传入一个参数，另外一个回默认为空(值为null)也会假如查询条件 -->
+	<select id="selectByUser" resultType="tk.mybatis.simple.model.SysUser">
+		select id,
+			user_name userName,
+			user_password userPassword,
+			user_email userEmail,
+			user_info userInfo,
+			head_img headImg,
+			create_time createTime
+		from sys_user
+		where 1=1
+		<if test="userName != null and userName != ''">
+			and user_name like concat('%',#{userName},'%')
+		</if>
+		<if test="userEmail != null and userEmail != ''">
+			and user_email = #{userEmail}
+		</if>
+	</select>
+	
+	<!--使用where标签 ，条件不满足就没有内容，还会自动去掉开头的and-->
+	<!--手写sql语句，需要开始添加 where 1=1 -->
+	<select id="selectByUser2" resultType="tk.mybatis.simple.model.SysUser">
+		select id,
+			user_name userName,
+			user_password userPassword,
+			user_email userEmail,
+			user_info userInfo,
+			head_img headImg,
+			create_time createTime
+		from sys_user
+		<where>
+			<if test="userName != null and userName != ''">
+				and user_name like concat('%',#{userName},'%')
+			</if>
+			<if test="userEmail != null and userEmail != ''">
+				and user_email = #{userEmail}
+			</if>
+		</where>
+	</select>
+	
+	<!-- set标签，会自动去掉结尾的"," ，这里仍需注意set元素中不能为空，所以保留了"id = #{id},"-->
+	<!-- 手写sql语句update...set...， 最后一个赋值结尾不能有","-->
+	<update id="updateByIdSelectivev">
+		update sys_user
+		<set>
+			<if test="userName != null and userName != ''">
+				user_name = #{userName},
+			</if>
+			<if test="userPassword != null and userPassword != ''">
+				user_password = #{userPassword},
+			</if>			
+			<if test="userEmail != null and userEmail != ''">
+				user_email = #{userEmail},
+			</if>
+			<if test="userInfo != null and userInfo != ''">
+				user_info = #{userInfo},
+			</if>
+			<if test="headImg != null and headImg != ''">
+				head_img = #{headImg,jdbcType=BLOB},
+			</if>
+			<if test="createTime != null and createTime != ''">
+				create_time = #{createTime,jdbcType=TIMESTAMP},
+			</if>
+			id = #{id},
+		</set>
+		where id = #{id}
+	</update>
+	
+	<!-- foreach批量，只有一个参数，集合：list，数组：array -->
+	<!-- 多参数使用，需要接口中指定@param ，对应标签内的collection属性值 -->
+	<select id="selectByIdList" resultType="tk.mybatis.simple.model.SysUser">
+		select id,
+			user_name userName,
+			user_password userPassword,
+			user_email userEmail,
+			user_info userInfo,
+			head_img headImg,
+			create_time createTime
+		from sys_user
+		where id in
+		<foreach collection="list" open="(" close=")" separator="," item="id" index="i">
+			#{id}
+		</foreach>
+	</select>
+	
+	<select id="selectByIdArray" resultType="tk.mybatis.simple.model.SysUser">
+		select id,
+			user_name userName,
+			user_password userPassword,
+			user_email userEmail,
+			user_info userInfo,
+			head_img headImg,
+			create_time createTime
+		from sys_user
+		where id in
+		<foreach collection="array" open="(" close=")" separator="," item="id" index="i">
+			#{id}
+		</foreach>
+	</select>
+	
+	<!-- 传入Map，collection：map中指定的key值;此时遍历对应的value值 -->
+	<!-- 需要循环map，@param注解指定名字/使用默认值_parameter -->
+	<select id="selectByMap" resultType="tk.mybatis.simple.model.SysUser">
+		select id,
+			user_name userName,
+			user_password userPassword,
+			user_email userEmail,
+			user_info userInfo,
+			head_img headImg,
+			create_time createTime
+		from sys_user
+		where id in
+		<foreach collection="id" open="(" close=")" separator="," item="id" index="i">
+			#{id}
+		</foreach>
+<!-- 		<foreach collection="_parameter" open="(" close=")" separator="," item="id" index="i">
+			#{id}
+		</foreach>	 -->	
+	</select>	
+	
+	<!-- 批量插入，mybatis3.3.1及其以上支持返回批量插入主键值 -->
+	<insert id="insertList">
+		insert into sys_user(user_name,user_email,user_info,head_img,create_time)
+		values
+		<foreach collection="list" item="user" separator=",">
+			(
+			#{user.userName},#{user.userEmail},#{user.userInfo},
+			#{user.headImg,jdbcType=BLOB},
+			#{user.createTime,jdbcType=TIMESTAMP}
+			)
+		</foreach>
+	</insert>
+
+	<update id="updateByMap">
+		update sys_user
+		set
+		<foreach collection="_parameter" item="val" index="key" separator=",">
+			${key} = #{val}
+		</foreach>
+		where id = #{id}
+	</update>
+</mapper>
